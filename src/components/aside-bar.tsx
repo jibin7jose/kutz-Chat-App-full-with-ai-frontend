@@ -1,4 +1,6 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
+import type { ChangeEvent } from "react";
+
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "./theme-provider";
 import Logo from "./logo";
@@ -25,17 +27,18 @@ const settingsOptions = [
 ];
 
 const AsideBar = () => {
-  const { user, logout, setUser } = useAuth();
+  const { user, logout, setUser } = useAuth(); // setUser must exist in your store
   const { theme, setTheme } = useTheme();
   const isOnline = isUserOnline(user?._id);
 
   const [showProfile, setShowProfile] = useState(false);
   const [search, setSearch] = useState("");
-  const [photo, setPhoto] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const fileInput = useRef(null);
+
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const filteredOptions = settingsOptions.filter(
     (opt) =>
@@ -43,7 +46,7 @@ const AsideBar = () => {
       opt.description.toLowerCase().includes(search.trim().toLowerCase())
   );
 
-  const handlePhotoChange = (e) => {
+  const handlePhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     setError("");
     const file = e.target.files?.[0];
     if (!file) return;
@@ -51,7 +54,8 @@ const AsideBar = () => {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      setPhotoPreview(event.target?.result || "");
+      const result = event.target?.result;
+      if (typeof result === "string") setPhotoPreview(result);
     };
     reader.readAsDataURL(file);
   };
@@ -67,8 +71,24 @@ const AsideBar = () => {
     try {
       const res = await fetch("/api/user/avatar", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Upload failed");
+
       const data = await res.json();
-      if (data.avatarUrl && setUser) setUser({ ...user, avatar: data.avatarUrl });
+
+      if (data.avatarUrl && setUser) {
+        if (user) {
+  setUser({
+    _id: user._id,         
+    name: user.name,
+    email: user.email,
+    avatar: data.avatarUrl,
+    isAI: user.isAI,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  });
+}
+
+      }
+
       setPhoto(null);
       setPhotoPreview("");
     } catch {
@@ -82,7 +102,6 @@ const AsideBar = () => {
 
   return (
     <>
-      {/* 🌟 Settings Modal */}
       {showProfile && (
         <div
           className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn"
@@ -120,6 +139,7 @@ const AsideBar = () => {
               >
                 <Camera className="w-4 h-4" /> Upload Photo
               </Button>
+
               <input
                 type="file"
                 accept="image/*"
@@ -176,7 +196,9 @@ const AsideBar = () => {
                         <span className="text-lg">{opt.icon}</span>
                         <div>
                           <div className="font-medium">{opt.label}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{opt.description}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {opt.description}
+                          </div>
                         </div>
                       </div>
                     </li>
@@ -188,7 +210,6 @@ const AsideBar = () => {
         </div>
       )}
 
-      {/* 🌈 AsideBar */}
       <aside className="fixed left-0 top-0 h-screen w-12 bg-gradient-to-b from-primary/90 to-purple-700 backdrop-blur-md flex flex-col justify-between items-center py-4 shadow-lg z-[9999]">
         <Logo
           url={PROTECTED_ROUTES.CHAT}
@@ -221,13 +242,15 @@ const AsideBar = () => {
                 />
               </div>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent className="w-48 rounded-xl shadow-xl z-[99999]" align="end">
               <DropdownMenuLabel
                 onClick={() => setShowProfile(true)}
                 className="cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800 px-3 py-2 rounded-md"
               >
-                ⚙️  Settings
+                ⚙️ Settings
               </DropdownMenuLabel>
+
               <DropdownMenuItem
                 onClick={logout}
                 className="text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30"

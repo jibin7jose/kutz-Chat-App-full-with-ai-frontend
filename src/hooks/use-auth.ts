@@ -16,6 +16,9 @@ interface AuthState {
   login: (data: LoginType) => Promise<void>;
   logout: () => Promise<void>;
   isAuthStatus: () => Promise<void>;
+
+  // 👇 Added setUser missing in your original store
+  setUser: (user: UserType | null) => void;
 }
 
 export const useAuth = create<AuthState>()(
@@ -25,6 +28,9 @@ export const useAuth = create<AuthState>()(
       isSigningUp: false,
       isLoggingIn: false,
       isAuthStatusLoading: false,
+
+      // 👇 FIXED: added setUser implementation
+      setUser: (user) => set({ user }),
 
       register: async (data: RegisterType) => {
         set({ isSigningUp: true });
